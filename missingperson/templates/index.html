@@ -70,6 +70,12 @@
           </li>
           <li><a class="nav-link   scrollto" href="/register">Report Case</a></li>
           <li><a class="getstarted scrollto" href="/surveillance">Surveillance Mode</a></li>
+          {% if user.is_authenticated %}
+            <li><a class="nav-link scrollto" href="/logout">Logout</a></li>
+          {% else %}
+            <li><a class="nav-link scrollto" href="/registeru">Register</a></li>
+            <li><a class="nav-link scrollto" href="/login">Login</a></li>
+          {% endif %}
         </ul>
         <i class="bi bi-list mobile-nav-toggle"></i>
       </nav><!-- .navbar -->

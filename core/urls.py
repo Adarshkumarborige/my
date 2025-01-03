@@ -31,6 +31,9 @@ urlpatterns = [
     path('delete/<int:person_id>/',delete_person, name='delete_person'),
     path('update/<int:person_id>/',update_person, name='update_person'),
     path('admin/', admin.site.urls),
+    path('login/', login_view, name='login'),
+    path('registeru/', register_view, name='registeru'),
+    path('logout/', logout_view, name='logout'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

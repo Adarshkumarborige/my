@@ -9,13 +9,59 @@ import cv2
 from twilio.rest import Client
 from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponse
-
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 #Add yourr own credentials
 account_sid = 'AC3f0fff3bc848b9266c5478d8b7476162'
 auth_token = 'cd11987e82ee2ef9fc1c392d37492b7d'
 twilio_whatsapp_number = '+12694487393'
 
 # Create your views here.
+def register_view(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+
+        # Check if email already exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email is already registered.')
+        else:
+            # Create the user
+            User.objects.create_user(username=username, password=password, email=email)
+            messages.success(request, 'Registration successful! Please log in.')
+            return redirect('login')
+
+    return render(request, 'registeru.html')
+def login_view(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        password = request.POST['password']
+
+        try:
+            # Get the user by email
+            user = User.objects.get(email=email)
+
+            # Authenticate the user
+            user = authenticate(request, username=user.username, password=password)
+
+            if user is not None:
+                login(request, user)
+                return redirect('home')  # Redirect to the home page
+            else:
+                messages.error(request, 'Invalid email or password.')
+        except User.DoesNotExist:
+            messages.error(request, 'No account found with this email.')
+
+    return render(request, 'login.html')
+def logout_view(request):
+    logout(request)
+    return redirect('home')
+
 def home(request):
     return render(request,"index.html")
 
@@ -42,69 +88,154 @@ def send_whatsapp_message(to,context):
 
     print(f"WhatsApp message sent: {message.sid}")
 
+# def detect(request):
+#     video_capture = cv2.VideoCapture(0)
+#     if not video_capture.isOpened():
+#         print("Error: Could not access the camera.")
+#         return render(request, "error.html", {"message": "Camera not accessible."})
+    
+#     process_this_frame = True
+#     face_detected = False
+
+#     while True:
+#         ret, frame = video_capture.read()
+#         if not ret:
+#             print("Error: Failed to capture frame.")
+#             break
+
+#         # Resize frame to 1/4 size for faster face detection
+#         small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+
+#         # Process every other frame
+#         if process_this_frame:
+#             face_locations = face_recognition.face_locations(small_frame)
+#             face_encodings = face_recognition.face_encodings(small_frame, face_locations)
+
+#             for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
+#                 for person in MissingPerson.objects.all():
+#                     stored_image = face_recognition.load_image_file(person.image.path)
+#                     stored_face_encoding = face_recognition.face_encodings(stored_image)[0]
+
+#                     matches = face_recognition.compare_faces([stored_face_encoding], face_encoding, tolerance=0.6)
+
+#                     if any(matches):
+#                         name = f"{person.first_name} {person.last_name}"
+#                         cv2.rectangle(frame, (left * 4, bottom * 4 - 35), (right * 4, bottom * 4), (0, 0, 255), cv2.FILLED)
+#                         font = cv2.FONT_HERSHEY_DUPLEX
+#                         cv2.putText(frame, name, (left * 4 + 6, bottom * 4 - 6), font, 1.0, (255, 255, 255), 1)
+
+#                         if not face_detected:
+#                             print(f"Hi {name} is found")
+#                             current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
+#                             subject = 'Missing Person Found'
+#                             from_email = 'signingintolobby@gmail.com'
+#                             recipientmail = person.email
+#                             recipient_phone_number = '+91' + str(person.phone_number)
+#                             context = {"first_name": person.first_name, "last_name": person.last_name,
+#                                        'fathers_name': person.father_name, "aadhar_number": person.aadhar_number,
+#                                        "missing_from": person.missing_from, "date_time": current_time, "location": "India"}
+#                             send_whatsapp_message(recipient_phone_number, context)
+#                             html_message = render_to_string('findemail.html', context=context)
+#                             send_mail(subject, '', from_email, [recipientmail], fail_silently=False, html_message=html_message)
+#                             face_detected = True
+#                             break
+
+#             if not face_detected:
+#                 name = "Unknown"
+#                 font = cv2.FONT_HERSHEY_DUPLEX
+#                 cv2.putText(frame, name, (left * 4 + 6, bottom * 4 - 6), font, 1.0, (255, 255, 255), 1)
+
+#         process_this_frame = not process_this_frame
+
+#         # Display the resulting image
+#         cv2.imshow('Camera Feed', frame)
+
+#         # Exit on 'q' key press
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             break
+
+#     video_capture.release()
+#     cv2.destroyAllWindows()
+#     return render(request, "surveillance.html")
+
+# import cv2
+import face_recognition
+from datetime import datetime
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from .models import MissingPerson
+
 def detect(request):
     video_capture = cv2.VideoCapture(0)
-    if not video_capture.isOpened():
-        print("Error: Could not access the camera.")
-        return render(request, "error.html", {"message": "Camera not accessible."})
-    
-    process_this_frame = True
     face_detected = False
+    face_check_frequency = 10  # Check every 10th frame for face detection
+    frame_count = 0  # To control frame checks
 
     while True:
         ret, frame = video_capture.read()
-        if not ret:
-            print("Error: Failed to capture frame.")
-            break
+        frame_count += 1
 
-        # Resize frame to 1/4 size for faster face detection
-        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+        # Skip frames to reduce the load
+        if frame_count % face_check_frequency != 0:
+            continue
 
-        # Process every other frame
-        if process_this_frame:
-            face_locations = face_recognition.face_locations(small_frame)
-            face_encodings = face_recognition.face_encodings(small_frame, face_locations)
+        # Find face locations and encodings in the current frame
+        face_locations = face_recognition.face_locations(frame)
+        face_encodings = face_recognition.face_encodings(frame, face_locations)
 
-            for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
-                for person in MissingPerson.objects.all():
-                    stored_image = face_recognition.load_image_file(person.image.path)
-                    stored_face_encoding = face_recognition.face_encodings(stored_image)[0]
+        for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
+            # Compare detected face with stored face images
+            for person in MissingPerson.objects.all():
+                stored_image = face_recognition.load_image_file(person.image.path)
+                stored_face_encoding = face_recognition.face_encodings(stored_image)[0]
 
-                    matches = face_recognition.compare_faces([stored_face_encoding], face_encoding, tolerance=0.6)
+                # Compare face encodings using a tolerance value
+                matches = face_recognition.compare_faces([stored_face_encoding], face_encoding)
 
-                    if any(matches):
-                        name = f"{person.first_name} {person.last_name}"
-                        cv2.rectangle(frame, (left * 4, bottom * 4 - 35), (right * 4, bottom * 4), (0, 0, 255), cv2.FILLED)
-                        font = cv2.FONT_HERSHEY_DUPLEX
-                        cv2.putText(frame, name, (left * 4 + 6, bottom * 4 - 6), font, 1.0, (255, 255, 255), 1)
+                if any(matches):
+                    name = person.first_name + " " + person.last_name
+                    font = cv2.FONT_HERSHEY_DUPLEX
+                    cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-                        if not face_detected:
-                            print(f"Hi {name} is found")
-                            current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
-                            subject = 'Missing Person Found'
-                            from_email = 'signingintolobby@gmail.com'
-                            recipientmail = person.email
-                            recipient_phone_number = '+91' + str(person.phone_number)
-                            context = {"first_name": person.first_name, "last_name": person.last_name,
-                                       'fathers_name': person.father_name, "aadhar_number": person.aadhar_number,
-                                       "missing_from": person.missing_from, "date_time": current_time, "location": "India"}
-                            send_whatsapp_message(recipient_phone_number, context)
-                            html_message = render_to_string('findemail.html', context=context)
-                            send_mail(subject, '', from_email, [recipientmail], fail_silently=False, html_message=html_message)
-                            face_detected = True
-                            break
+                    # Send email if face is detected and it's the first time
+                    if not face_detected:
+                        current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
+                        subject = 'Missing Person Found'
+                        from_email = 'signingintolobby@gmail.com'
+                        recipientmail = person.email
+                        recipient_phone_number = '+91'+str(person.phone_number)
+                        
+                        # Prepare the context for the email
+                        context = {
+                            "first_name": person.first_name,
+                            "last_name": person.last_name,
+                            'fathers_name': person.father_name,
+                            "aadhar_number": person.aadhar_number,
+                            "missing_from": person.missing_from,
+                            "date_time": current_time,
+                            "location": "India"
+                        }
 
-            if not face_detected:
-                name = "Unknown"
-                font = cv2.FONT_HERSHEY_DUPLEX
-                cv2.putText(frame, name, (left * 4 + 6, bottom * 4 - 6), font, 1.0, (255, 255, 255), 1)
+                        # Render the HTML email
+                        html_message = render_to_string('findemail.html', context=context)
+                        
+                        # Send the email
+                        send_mail(
+                            subject,
+                            '',  # Plain text version (leave empty if not required)
+                            from_email,
+                            [recipientmail],
+                            fail_silently=False,
+                            html_message=html_message
+                        )
 
-        process_this_frame = not process_this_frame
+                        face_detected = True  # Mark that a face has been detected
+                        break  # Exit after sending the email
 
-        # Display the resulting image
+        # Display the resulting image with the detected face name
         cv2.imshow('Camera Feed', frame)
 
-        # Exit on 'q' key press
+        # Hit 'q' on the keyboard to quit!
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -112,78 +243,10 @@ def detect(request):
     cv2.destroyAllWindows()
     return render(request, "surveillance.html")
 
-# def detect(request):
-#     video_capture = cv2.VideoCapture(0)
-    
-#     # Initialize a flag to track if a face has been detected in the current video stream
-#     face_detected = False
-    
-#     while True:
-#         ret, frame = video_capture.read()
-        
-#         # Find face locations and encodings in the current frame
-#         face_locations = face_recognition.face_locations(frame)
-#         face_encodings = face_recognition.face_encodings(frame, face_locations)
-        
-#         for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
-#             # Compare detected face with stored face images
-#             for person in MissingPerson.objects.all():
-#                 stored_image = face_recognition.load_image_file(person.image.path)
-#                 stored_face_encoding = face_recognition.face_encodings(stored_image)[0]
-
-#                 # Compare face encodings using a tolerance vaue
-#                 #tolerance = 0.6  # Adjust this tolerance as needed
-#                 matches = face_recognition.compare_faces([stored_face_encoding], face_encoding)
-
-#                 if any(matches):
-#                     name = person.first_name + " " + person.last_name
-#                     cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-#                     font = cv2.FONT_HERSHEY_DUPLEX
-#                     cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
-
-#                     # Check if a face has already been detected in this video stream
-#                     if face_detected:
-#                         print("Hi " + name + " is found")
-                        
-#                         current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
-#                         subject = 'Missing Person Found'
-#                         from_email = 'pptodo01@gmail'
-#                         recipientmail = person.email
-#                         recipient_phone_number = '+91'+str(person.phone_number)
-#                         print(recipient_phone_number)
-#                         context = {"first_name":person.first_name,"last_name":person.last_name,
-#                                     'fathers_name':person.father_name,"aadhar_number":person.aadhar_number,
-#                                     "missing_from":person.missing_from,"date_time":current_time,"location":"India"}
-#                         #send_wapmessage(context,current_time,wapnum)
-#                         send_whatsapp_message(recipient_phone_number, context)
-#                         html_message = render_to_string('findemail.html',context = context)
-#                         # Send the email
-#                         send_mail(subject,'', from_email, [recipientmail], fail_silently=False, html_message=html_message)
-#                         face_detected = True  # Set the flag to True to indicate a face has been detected
-#                         break  # Break the loop once a match is found
-
-#             # Check if no face was detected in the current frame
-#             if not face_detected:
-#                 name = "Unknown"
-#                 #cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-#                 font = cv2.FONT_HERSHEY_DUPLEX
-#                 cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
-
-#         # Display the resulting image
-#         cv2.imshow('Camera Feed', frame)
-
-#         # Hit 'q' on the keyboard to quit!
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-            
-#     video_capture.release()
-#     cv2.destroyAllWindows()
-#     return render(request, "surveillance.html")
-
 def surveillance(request):
     return render(request,"surveillance.html")
 
-
+@login_required
 def register(request):
     if request.method == 'POST':
         first_name = request.POST.get('first_name')

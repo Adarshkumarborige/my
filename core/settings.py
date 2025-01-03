@@ -142,6 +142,12 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER =  "signingintolobby@gmail.com"# Replace with your Gmail email address
-EMAIL_HOST_PASSWORD = "1380 4869 6164 2513" # Replace with your password
+EMAIL_HOST_PASSWORD = "wlsyfetsnlufyzhb" # Replace with your password
 # settings.py
+LOGIN_URL = 'login'  # Redirect users to login page if they are not authenticated
+LOGIN_REDIRECT_URL = 'home'  # Redirect to a specific page after login (you can change this to 'home' or any view)
+
+# Session settings
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
+SESSION_COOKIE_AGE = 3600  # 1 hour session expiry time (in seconds)
 
