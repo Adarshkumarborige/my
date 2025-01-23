@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
 
 ]
 EXTERNAL_APPS = ['missingperson']
@@ -143,6 +144,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER =  "signingintolobby@gmail.com"# Replace with your Gmail email address
 EMAIL_HOST_PASSWORD = "wlsyfetsnlufyzhb" # Replace with your password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # settings.py
 LOGIN_URL = 'login'  # Redirect users to login page if they are not authenticated
 LOGIN_REDIRECT_URL = 'home'  # Redirect to a specific page after login (you can change this to 'home' or any view)
