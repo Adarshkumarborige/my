@@ -138,13 +138,22 @@ MEDIA_URL = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # brel bopf laof qbmo
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER =  "signingintolobby@gmail.com"# Replace with your Gmail email address
+# EMAIL_HOST_PASSWORD = "wlsyfetsnlufyzhb" # Replace with your password
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.mail.yahoo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER =  "signingintolobby@gmail.com"# Replace with your Gmail email address
-EMAIL_HOST_PASSWORD = "wlsyfetsnlufyzhb" # Replace with your password
+EMAIL_HOST_USER = "adarsh.borige@yahoo.com"
+EMAIL_HOST_PASSWORD = "sxiukyycwpoatoov"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 # settings.py
 LOGIN_URL = 'login'  # Redirect users to login page if they are not authenticated
 LOGIN_REDIRECT_URL = 'home'  # Redirect to a specific page after login (you can change this to 'home' or any view)

@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+import geocoder
 #Add yourr own credentials
 account_sid = 'AC3f0fff3bc848b9266c5478d8b7476162'
 auth_token = 'cd11987e82ee2ef9fc1c392d37492b7d'
@@ -201,7 +202,7 @@ def detect(request):
                     if not face_detected:
                         current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
                         subject = 'Missing Person Found'
-                        from_email = 'signingintolobby@gmail.com'
+                        from_email = 'adarsh.borige@yahoo.com'
                         recipientmail = person.email
                         recipient_phone_number = '+91'+str(person.phone_number)
                         
@@ -228,7 +229,19 @@ def detect(request):
                             fail_silently=False,
                             html_message=html_message
                         )
+                        
+                         # Get the current location (latitude and longitude) using geocoder
+                        g = geocoder.ip('me')  # Using IP address for location, you can use other methods
+                        latitude = g.latlng[0] if g.latlng else None
+                        longitude = g.latlng[1] if g.latlng else None
 
+                        # Save the location to the database
+                        if latitude and longitude:
+                            Location.objects.create(
+                                missing_person=person,
+                                latitude=latitude,
+                                longitude=longitude,
+                            )
                         face_detected = True  # Mark that a face has been detected
                         break  # Exit after sending the email
 
@@ -281,7 +294,7 @@ def register(request):
         messages.success(request,'Case Registered Successfully')
         current_time = datetime.now().strftime('%d-%m-%Y %H:%M')
         subject = 'Case Registered Successfully'
-        from_email = 'pptodo01@gmail'
+        from_email = 'adarsh.borige@yahoo.com'
         recipientmail = person.email
         context = {"first_name":person.first_name,"last_name":person.last_name,
                     'fathers_name':person.father_name,"aadhar_number":person.aadhar_number,
